@@ -1,0 +1,44 @@
+#include <opencv2/opencv.hpp>
+#include <iostream>
+
+using namespace cv;
+using namespace std;
+
+int main(int argc, char** argv) {
+	Mat src = imread("image2.jpg");
+	if (src.empty()) {
+		printf("could not load image...\n");
+		return -1;
+	}
+	namedWindow("input image", CV_WINDOW_AUTOSIZE);
+	imshow("input image", src);
+
+	Mat dst, dst_gray;
+	resize(src, dst, Size(64, 128));
+	//1、转换为灰度
+	cvtColor(dst, dst_gray, COLOR_BGR2GRAY);
+	//2、定义detector
+	HOGDescriptor detector(Size(64, 128), Size(16, 16), Size(8, 8), Size(8, 8), 9);
+	//3、定义描述子
+	vector<float> descriptors;
+	vector<Point> locations;
+	detector.compute(dst_gray, descriptors, Size(0, 0), Size(0, 0), locations);
+	printf("number of HOG descriptors : %d", descriptors.size());
+	
+	//二、HOG + SVM实现行人检测
+	HOGDescriptor hog = HOGDescriptor();
+	hog.setSVMDetector(hog.getDefaultPeopleDetector());
+
+	vector<Rect> foundLocations;
+	hog.detectMultiScale(src, foundLocations, 0, Size(8, 8), Size(32, 32), 1.05, 2);
+	Mat result = src.clone();
+	for (size_t t = 0; t < foundLocations.size(); t++) {
+		rectangle(result, foundLocations[t], Scalar(0, 0, 255), 2, 8, 0);
+	}
+	namedWindow("HOG SVM Detector Demo", CV_WINDOW_AUTOSIZE);
+	imshow("HOG SVM Detector Demo", result);
+
+	waitKey(0);
+	return 0;
+}
+}
